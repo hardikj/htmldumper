@@ -4,31 +4,34 @@
 var P = require('bluebird');
 
 var makeDump = require('../lib/htmldump');
+var utils = require('../lib/utils');
 
 var argParser = require('yargs')
-    .usage('Create a HTML dump in a subdir\n\n'
-            + '\nExample:\n$0 --domain en.wikipedia.org --ns 0 --apiURL http://en.wikipedia.org/w/api.php')
-    .demand(['apiURL', 'domain', 'ns', 'host'])
+    .usage('Create a HTML dump in a subdir\n'
+            + '\nExample:\n$0 --domain en.wikipedia.org --ns 0 --apiURL http://en.wikipedia.org/w/api.php'
+            + '\n\nExample:\n$0 --c config.example.yaml')
+    //.demand(['apiURL', 'domain', 'ns', 'host'])
     .options('h', {
         alias: 'help'
     })
-    .alias('domain', 'prefix')
     .options('d', {
         alias : 'saveDir',
-        default : ''
     })
     .options('db', {
         alias : 'dataBase',
-        default : ''
     })
     .options('verbose', {
         default : true
     })
+    .options('c', {
+        alias : 'config'
+    })
+    .options('domain', {
+        alias : 'prefix',
+    })
     //.default('apiURL', 'http://en.wikipedia.org/w/api.php')
-    //.default('prefix', 'en.wikipedia.org')
     //.default('ns', '0')
     .default('host', 'http://rest.wikimedia.org');
-
 var argv = argParser.argv;
 if (argv.h) {
     argParser.showHelp();
@@ -38,9 +41,69 @@ if (argv.h) {
 // Strip a trailing slash
 argv.host = argv.host.replace(/\/$/, '');
 
-argv.ns = Number(argv.ns);
+// Default global options
+var args = { 
+    options : { 
+        maxConcurrency : 50, 
+        concurrency: 3 
+    }
+};
 
-return makeDump(argv)
+if (argv.c) {
+    // Get config, or throw exception on error
+    args.options = utils.loadAndParseConfig(argv);
+
+    // Check if required params are missing
+    if (!argv.apiURL || !argv.domain || argv.ns == undefined || !argv.host) {
+        console.log('[Error - One of the required params is missing in config]');
+        process.exit(1);
+    }
+
+    // Set defaults
+    if (!argv.d) {
+        argv.d = '';
+    }
+    if (!argv.db) {
+        argv.db = '';
+    }
+    if (!argv.verbose) {
+        argv.verbose = true;
+    }
+    if (!argv.prefix) {
+        argv.prefix = argv.domain
+    }
+
+} else {
+    //check whats missing and show help
+    argParser.reset()
+        .usage('Create a HTML dump in a subdir\n'
+                + '\nExample:\n$0 --domain en.wikipedia.org --ns 0 --apiURL http://en.wikipedia.org/w/api.php')
+        .demand(['apiURL', 'domain', 'ns', 'host'])
+        .options('h', {
+            alias: 'help'
+        })
+        .alias('domain', 'prefix')
+        .options('d', {
+            alias : 'saveDir',
+            default : ''
+        })
+        .options('db', {
+            alias : 'dataBase',
+            default : ''
+        })
+        .options('verbose', {
+            default : true
+        })
+        .default('host', 'http://rest.wikimedia.org');
+    argv = argParser.argv;
+    if (!argv) {
+        console.log(argv);
+    }
+}
+
+args['argv'] = argv;
+
+return makeDump(args)
 .catch(function(err) {
     console.error('Error in main;', err);
 });

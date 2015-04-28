@@ -2,6 +2,7 @@
 "use strict";
 
 var dumpAllWikis = require('../lib/dump_restbase');
+var utils = require('../lib/utils');
 
 var argParser = require('yargs')
     .usage('Create HTML dumps in a directoy\n'
@@ -15,18 +16,39 @@ var argParser = require('yargs')
         describe: 'Verbose logging',
     })
     .options('workDir', {
-        default: '/tmp',
         describe: 'Directory to use for in-progress dump files',
     })
     .options('dumpDir', {
-        default: '/tmp',
         describe: 'Directory to use for finished dump files',
     });
-var options = argParser.argv;
+var argv = argParser.argv;
 
-if (options.h) {
+if (argv.h) {
     argParser.showHelp();
     process.exit(1);
 }
 
-return dumpAllWikis(options);
+// Default global options
+var args = { 
+    options : { 
+        maxConcurrency : 50, 
+        concurrency: 3 
+    }
+};
+
+if (argv.c) {
+    // Get config, or throw exception on error
+    args.options = utils.loadAndParseConfig(argv);
+
+    // Set defaults
+    if (!argv.dumpDir) {
+        argv.d = '/tmp';
+    }
+    if (!argv.workDir) {
+        argv.db = '/tmp';
+    }
+}
+
+args['argv'] = argv;
+
+return dumpAllWikis(args);

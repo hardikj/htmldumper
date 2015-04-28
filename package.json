@@ -20,8 +20,9 @@
   },
   "dependencies": {
     "bluebird": "~2.3.11",
+    "js-yaml": "~3.2.2",
     "preq": "~0.3.1",
     "sqlite3": "^3.0.5",
-    "yargs": "~1.2.1"
+    "yargs": "~3.8.0"
   }
 }
